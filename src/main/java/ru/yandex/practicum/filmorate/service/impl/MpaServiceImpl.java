@@ -1,10 +1,11 @@
-package ru.yandex.practicum.filmorate.service.mpa;
+package ru.yandex.practicum.filmorate.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.mpa.IncorrectMpaIdException;
 import ru.yandex.practicum.filmorate.model.Rating;
-import ru.yandex.practicum.filmorate.storage.mpa.MpaStorage;
+import ru.yandex.practicum.filmorate.service.MpaService;
+import ru.yandex.practicum.filmorate.storage.MpaStorage;
 
 import java.util.List;
 
@@ -22,7 +23,7 @@ public class MpaServiceImpl implements MpaService {
     @Override
     public Rating getById(Integer id) {
         if (mpaStorage.getById(id) == null) {
-            throw new IncorrectMpaIdException("Указан некорректный id рейтинга");
+            throw new IncorrectMpaIdException(String.format("Указан некорректный id рейтинга: %s", id));
         }
         return mpaStorage.getById(id);
     }

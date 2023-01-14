@@ -5,7 +5,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.validation.constraints.*;
 import java.time.LocalDate;
-import java.util.*;
 
 @Getter
 @Setter
@@ -28,7 +27,4 @@ public class User {
     @NotNull
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthday;
-
-    private Set<Integer> friends; // не знаю что делать с тестами :(
-
 }

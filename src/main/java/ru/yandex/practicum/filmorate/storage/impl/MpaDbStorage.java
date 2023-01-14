@@ -1,19 +1,19 @@
-package ru.yandex.practicum.filmorate.storage.mpa;
+package ru.yandex.practicum.filmorate.storage.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.Rating;
+import ru.yandex.practicum.filmorate.storage.MpaStorage;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class MpaDbStorage implements MpaStorage{
+public class MpaDbStorage implements MpaStorage {
     private final JdbcTemplate jdbcTemplate;
-
 
     @Override
     public List<Rating> getAll() {

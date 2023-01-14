@@ -4,9 +4,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ru.yandex.practicum.filmorate.exception.genre.IncorrectGenreIdException;
 import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.service.genre.GenreService;
+import ru.yandex.practicum.filmorate.service.GenreService;
 
 import java.util.List;
 
@@ -20,12 +19,12 @@ public class GenreController {
     }
 
     @GetMapping
-    public List<Genre> getAllGenres() {
+    public List<Genre> getAll() {
          return genreService.getAll();
     }
 
     @GetMapping("/{id}")
-    public Genre getGenreById(
+    public Genre getById(
             @PathVariable("id") Integer id) {
         return genreService.getById(id);
     }

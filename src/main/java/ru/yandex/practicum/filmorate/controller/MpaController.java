@@ -4,9 +4,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ru.yandex.practicum.filmorate.exception.mpa.IncorrectMpaIdException;
 import ru.yandex.practicum.filmorate.model.Rating;
-import ru.yandex.practicum.filmorate.service.mpa.MpaService;
+import ru.yandex.practicum.filmorate.service.MpaService;
 
 import java.util.List;
 
@@ -20,12 +19,12 @@ public class MpaController {
     }
 
     @GetMapping
-    public List<Rating> getAllRating() {
+    public List<Rating> getAll() {
         return mpaService.getAll();
     }
 
     @GetMapping("/{id}")
-    public Rating getRatingById(
+    public Rating getById(
             @PathVariable("id") Integer id) {
         return mpaService.getById(id);
     }

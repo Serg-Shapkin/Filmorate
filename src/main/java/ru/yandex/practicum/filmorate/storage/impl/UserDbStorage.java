@@ -1,4 +1,4 @@
-package ru.yandex.practicum.filmorate.storage.user;
+package ru.yandex.practicum.filmorate.storage.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.user.IncorrectUserIdException;
 import ru.yandex.practicum.filmorate.exception.user.UserDatabaseIsEmptyException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.friend.FriendStorage;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.*;
 
@@ -16,11 +16,9 @@ import java.util.*;
 public class UserDbStorage implements UserStorage {
     private int userId = 0;
     private final JdbcTemplate jdbcTemplate;
-    private final FriendStorage friendStorage;
 
-    public UserDbStorage(JdbcTemplate jdbcTemplate, FriendStorage friendStorage) {
+    public UserDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-        this.friendStorage = friendStorage;
         makeUserId();
     }
 
@@ -78,46 +76,13 @@ public class UserDbStorage implements UserStorage {
         SqlRowSet userRowSet = jdbcTemplate.queryForRowSet("SELECT * FROM USERS WHERE USER_ID = ?", id);
         userRowSet.next();
         if (userRowSet.last()) {
-            // log.info("Запрошен пользователь c id={}", id);
             return makeUser(userRowSet);
         } else {
             log.error("Указан некорректный id пользователя");
             throw new IncorrectUserIdException("Указан некорректный id пользователя");
         }
     }
-
-    @Override
-    public void addToFriends(Integer id, Integer friendId) {
-        friendStorage.addToFriends(id, friendId);
-    }
-
-    @Override
-    public void removeFriend(Integer id, Integer friendId) {
-        friendStorage.removeFriend(id, friendId);
-    }
-
-    @Override
-    public List<User> getFriendsById(Integer id) {
-        List<User> friends = new ArrayList<>();
-        SqlRowSet allFriendsRowSet = jdbcTemplate.queryForRowSet("SELECT FRIEND_ID FROM FRIENDSHIP WHERE USER_ID = ?", id);
-        while (allFriendsRowSet.next()) {
-            friends.add(getById(allFriendsRowSet.getInt("FRIEND_ID")));
-        }
-        log.info("Запрошен список друзей пользователя {}", getById(id).getName());
-        return friends;
-    }
-
-    @Override
-    public List<User> getCommonFriends(Integer id, Integer otherId) {
-        List<User> friends = new ArrayList<>();
-        SqlRowSet commonFriendsRowSet = jdbcTemplate.queryForRowSet("SELECT FRIEND_ID FROM FRIENDSHIP  WHERE USER_ID = ? OR USER_ID = ? GROUP BY FRIEND_ID HAVING COUNT(*) > 1", id, otherId);
-        while (commonFriendsRowSet.next()) {
-            friends.add(getById(commonFriendsRowSet.getInt("FRIEND_ID")));
-        }
-        log.info("Запрошен общий список друзей друзей");
-        return friends;
-    }
-
+    
     private User makeUser(SqlRowSet userRowSet) {
         User user = new User();
         user.setId(userRowSet.getInt("USER_ID"));
@@ -133,7 +98,6 @@ public class UserDbStorage implements UserStorage {
         while (userRowSetFriends.next()) {
             friends.add(userRowSetFriends.getInt("FRIEND_ID"));
         }
-        user.setFriends(friends);
         return user;
     }
 

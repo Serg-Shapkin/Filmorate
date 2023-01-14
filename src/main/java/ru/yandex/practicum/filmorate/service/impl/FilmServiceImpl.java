@@ -1,4 +1,4 @@
-package ru.yandex.practicum.filmorate.service.film;
+package ru.yandex.practicum.filmorate.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -6,8 +6,10 @@ import ru.yandex.practicum.filmorate.exception.film.FilmValidationException;
 import ru.yandex.practicum.filmorate.exception.film.InvalidReleaseDateFilmException;
 import ru.yandex.practicum.filmorate.exception.user.UserValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.service.user.UserService;
-import ru.yandex.practicum.filmorate.storage.film.FilmDbStorage;
+import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.service.UserService;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.LikeStorage;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -18,31 +20,32 @@ import java.util.List;
 public class FilmServiceImpl implements FilmService {
 
     private static final LocalDate RELEASE_DATE = LocalDate.of(1895,12,28);
-    private final FilmDbStorage filmDbStorage;
+    private final FilmStorage filmStorage;
     private final UserService userService;
+    private final LikeStorage likeStorage;
 
     @Override
     public Film add(Film film) {
         filmReleaseDateValidation(film); // проверка даты релиза
-        return filmDbStorage.add(film);
+        return filmStorage.add(film);
     }
 
     @Override
     public Film update(Film film) {
         filmReleaseDateValidation(film); // проверка даты релиза
         filmValidation(film.getId());
-        return filmDbStorage.update(film);
+        return filmStorage.update(film);
     }
 
     @Override
     public List<Film> getAll() {
-        return new ArrayList<>(filmDbStorage.getAll());
+        return new ArrayList<>(filmStorage.getAll());
     }
 
     @Override
     public Film getById(Integer id) {
         filmValidation(id);
-        return filmDbStorage.getById(id);
+        return filmStorage.getById(id);
     }
 
     @Override
@@ -50,8 +53,8 @@ public class FilmServiceImpl implements FilmService {
         filmValidation(id);
         userValidation(userId);
 
-        filmDbStorage.addLike(id, userId);
-        return filmDbStorage.getById(id);
+        likeStorage.add(id, userId);
+        return filmStorage.getById(id);
     }
 
     @Override
@@ -59,26 +62,25 @@ public class FilmServiceImpl implements FilmService {
         filmValidation(id);
         userValidation(userId);
 
-        filmDbStorage.removeLike(id, userId);
-        return filmDbStorage.getById(id);
+        likeStorage.remove(id, userId);
+        return filmStorage.getById(id);
     }
 
     @Override
     public List<Film> getPopular(Integer size) {
-        return filmDbStorage.getPopular(size);
+        return filmStorage.getPopular(size);
     }
 
     private void filmValidation(Integer id) {
-        if (filmDbStorage.getById(id) == null) {
+        if (filmStorage.getById(id) == null) {
             throw new FilmValidationException("Фильм с id=" + id + " не найден в базе");
         }
     }
 
-    private Film filmReleaseDateValidation(Film film) {
+    private void filmReleaseDateValidation(Film film) {
         if (film.getReleaseDate().isBefore(RELEASE_DATE)) {
             throw new InvalidReleaseDateFilmException("Дата релиза фильма не может быть раньше 28 декабря 1895 года");
         }
-        return film;
     }
 
     private void userValidation(Integer id) {

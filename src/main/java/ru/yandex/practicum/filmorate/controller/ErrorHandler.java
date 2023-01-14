@@ -23,7 +23,7 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST) // код 400 - фильм добавлен ранее
     public ErrorResponse handleFilmValidationException(final FilmValidationException e) {
-        log.error("Фильм не найден в базе");
+        log.info("Фильм не найден: {}", e.getMessage());
         return new ErrorResponse(
                 e.getMessage()
         );
@@ -32,7 +32,7 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND) // код 404 - фильм добавлен ранее/отсутствует в базе
     public ErrorResponse handleIncorrectFilmIdException(final IncorrectFilmIdException e) {
-        log.error("Указан некорректный id фильма");
+        log.info("Указан некорректный id фильма: {}", e.getMessage());
         return new ErrorResponse(
                 e.getMessage()
         );
@@ -41,7 +41,7 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST) // код 400 - пустое название фильма
     public ErrorResponse handleInvalidFilmNameException(final InvalidFilmNameException e) {
-        log.error("Название фильма не может быть пустым");
+        log.info("Название фильма не может быть пустым");
         return new ErrorResponse(
                 e.getMessage()
         );
@@ -50,7 +50,7 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST) // код 400 - ошибка дата релиза фильма
     public ErrorResponse handleInvalidReleaseDateFilmException(final InvalidReleaseDateFilmException e) {
-        log.error("Дата релиза фильма не может быть раньше 28 декабря 1895 года");
+        log.info("Дата релиза фильма не может быть раньше 28 декабря 1895 года");
         return new ErrorResponse(
                 e.getMessage()
         );
@@ -59,7 +59,7 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND) // код 400 - пользователь добавлен ранее / указан некорректный id
     public ErrorResponse handleIncorrectUserIdException(final IncorrectUserIdException e) {
-        log.error("Указан некорректный id пользователя или пользователь был добавлен ранее");
+        log.info("Указан некорректный id пользователя или пользователь был добавлен ранее");
         return new ErrorResponse(
                 e.getMessage()
         );
@@ -68,7 +68,7 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND) // код 404 - нет пользователей в базе
     public ErrorResponse handleUserDatabaseIsEmptyException(final UserDatabaseIsEmptyException e) {
-        log.error("В базе не сохранено ни одного пользователя");
+        log.info("В базе не сохранено ни одного пользователя");
         return new ErrorResponse(
                 e.getMessage()
         );
@@ -77,18 +77,17 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND) // код 404 - пользователь не найден в базе
     public ErrorResponse handleUserValidationException(final UserValidationException e) {
-        log.error("Пользователь не найден в базе");
+        log.info("Пользователь не найден в базе: {}", e.getMessage());
         return new ErrorResponse(
                 e.getMessage()
         );
     }
 
-    // обработчик для исключения, которое выбрасывается при валидации данных с помощью аннотаций MethodArgumentNotValidException
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST) // 400
     public ErrorResponse handleMethodArgumentNotValidException(final MethodArgumentNotValidException e) {
-        log.error("Некорректные данные от пользователя");
-        return  new ErrorResponse(
+        log.info("Некорректные данные от пользователя: {}", e.getMessage());
+        return new ErrorResponse(
                 e.getMessage()
         );
     }
@@ -96,7 +95,7 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND) // код 404 - рейтинг не найден в базе
     public ErrorResponse handleIncorrectMpaIdException(final IncorrectMpaIdException e) {
-        log.error("Указан некорректный id рейтинга");
+        log.info("Указан некорректный id рейтинга");
         return new ErrorResponse(
                 e.getMessage()
         );
@@ -105,7 +104,7 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND) // код 404 - жанр не найден в базе
     public ErrorResponse handleIncorrectGenreIdException(final IncorrectGenreIdException e) {
-        log.error("Указан некорректный id жанра");
+        log.info("Указан некорректный id жанра");
         return new ErrorResponse(
                 e.getMessage()
         );
@@ -113,7 +112,7 @@ public class ErrorHandler {
 
     @ExceptionHandler
     public ResponseEntity<String> handleIncorrectParameterException(IncorrectParameterException e) {
-        log.error("Передан некорректный параметр: {}", e.getParameter());
+        log.info("Передан некорректный параметр: {}", e.getParameter());
          return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST); // 400
     }
 
@@ -123,6 +122,4 @@ public class ErrorHandler {
         log.error("Произошла непредвиденная ошибка");
         return new ErrorResponse("Произошла непредвиденная ошибка");
     }
-
-
 }

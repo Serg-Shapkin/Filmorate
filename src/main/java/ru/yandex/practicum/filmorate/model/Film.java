@@ -31,8 +31,6 @@ public class Film {
     @Positive(message = "Продолжительность фильма не может быть отрицательной или равна нулю")
     private int duration;
 
-    private Set<Integer> likes; // не знаю что делать с тестами :(
-
     private int rate;
 
     @NotNull
