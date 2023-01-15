@@ -12,6 +12,7 @@ import ru.yandex.practicum.filmorate.model.Rating;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -44,6 +45,7 @@ public class FilmDbStorage implements FilmStorage {
         }
         SqlRowSet filmRowSet = jdbcTemplate.queryForRowSet("SELECT * FROM FILM AS f INNER JOIN MPA AS m ON m.ID = f.RATING_ID WHERE FILM_ID = ?", film.getId());
         filmRowSet.next();
+        log.info("Добавлен фильм {}", film.getName());
         return makeFilm(filmRowSet);
     }
 
@@ -93,6 +95,7 @@ public class FilmDbStorage implements FilmStorage {
         SqlRowSet filmRowSet = jdbcTemplate.queryForRowSet("SELECT * FROM FILM AS f INNER JOIN MPA AS m ON m.ID = f.RATING_ID WHERE FILM_ID = ?", id);
         filmRowSet.next();
         if (filmRowSet.last()) {
+            log.info("Запрошен фильм с id={}", id);
             return makeFilm(filmRowSet);
         } else {
             log.error("Указан некорректный id фильма {}", id);
@@ -104,7 +107,7 @@ public class FilmDbStorage implements FilmStorage {
      При текущей реализации в цикле вызывается метод getById, что не совсем корректно,
      так как на каждый его вызов происходит обращение к БД
      */
-    @Override //  рабочий код
+/*        @Override //  рабочий код
     public List<Film> getPopular(Integer size) {
         SqlRowSet popularFilmRowSet = jdbcTemplate.queryForRowSet("SELECT FILM_ID, RATE FROM FILM GROUP BY FILM_ID, RATE ORDER BY RATE DESC LIMIT ?", size);
         List<Film> films = new ArrayList<>();
@@ -112,6 +115,33 @@ public class FilmDbStorage implements FilmStorage {
             films.add(getById(popularFilmRowSet.getInt("FILM_ID")));
         }
         return films;
+    }*/
+
+    @Override
+    public List<Film> getPopular(Integer size) {
+        String sql = "SELECT * FROM FILM AS f, MPA AS m WHERE f.FILM_ID = m.ID ORDER BY RATE DESC LIMIT ?";
+        List<Film> popularFilms = jdbcTemplate.query(sql, (resultSet, rowNum) -> makePopularFilm(resultSet), size);
+        log.info("Запрошен список из {} самых популярных фильмов", size);
+        return popularFilms;
+    }
+
+    private Film makePopularFilm(ResultSet resultSet) throws SQLException {
+        Film film = new Film();
+        film.setId(resultSet.getInt("FILM_ID"));
+        film.setName(resultSet.getString("NAME"));
+        film.setDescription(resultSet.getString("DESCRIPTION"));
+        film.setReleaseDate(resultSet.getDate("RELEASE_DATE").toLocalDate());
+        film.setDuration(resultSet.getInt("DURATION"));
+        film.setRate(resultSet.getInt("RATE"));
+
+        Rating rating = new Rating();
+        rating.setId(resultSet.getInt("RATING_ID"));
+        rating.setName(resultSet.getString("RATING"));
+        film.setMpa(rating);
+
+        film.setGenres(setFilmGenre(film));
+
+        return film;
     }
 
     private Film makeFilm(SqlRowSet filmRowSet) {
@@ -126,22 +156,24 @@ public class FilmDbStorage implements FilmStorage {
         film.setRate(filmRowSet.getInt("RATE"));
 
         // рейтинг
-        film.setMpa(new Rating(filmRowSet.getInt("RATING_ID"), filmRowSet.getString("RATING")));
-
-        // лайки
-        Set<Integer> like = new HashSet<>();
-        SqlRowSet likeRowSet = jdbcTemplate.queryForRowSet("SELECT USER_ID FROM LIKES WHERE FILM_ID = ?", filmId);
-        while (likeRowSet.next()) {
-            like.add(likeRowSet.getInt("USER_ID"));
-        }
+        Rating rating = new Rating();
+        rating.setId(filmRowSet.getInt("RATING_ID"));
+        rating.setName(filmRowSet.getString("RATING"));
+        film.setMpa(rating);
 
         // жанры
-        /**
-         Следует использовать отдельный метод в DAO-жанров, который будет принимать коллекцию фильмов и добавлять в каждую из коллекций фильмов полученные жанры.
-         О том, как использовать SQL оператор условия IN для получения по коллекции идентификаторов - можно посмотреть тут:
-         https://www.baeldung.com/spring-jdbctemplate-in-list
-         Таким образом мы избавимся от n-лишних запросов к БД и улучшим производительность приложения)
-         **/
+        film.setGenres(setFilmGenre(film));
+        return film;
+    }
+
+    /**
+     Следует использовать отдельный метод в DAO-жанров, который будет принимать коллекцию фильмов и добавлять в каждую из коллекций фильмов полученные жанры.
+     О том, как использовать SQL оператор условия IN для получения по коллекции идентификаторов - можно посмотреть тут:
+     https://www.baeldung.com/spring-jdbctemplate-in-list
+     Таким образом мы избавимся от n-лишних запросов к БД и улучшим производительность приложения)
+     **/
+    private Set<Genre> setFilmGenre(Film film) {
+        int filmId = film.getId();
         Set<Genre> genres = new LinkedHashSet<>();
         SqlRowSet genreRowSet = jdbcTemplate.queryForRowSet("SELECT g.ID, g.GENRE " +
                 "FROM GENRE AS g " +
@@ -152,8 +184,7 @@ public class FilmDbStorage implements FilmStorage {
         while (genreRowSet.next()) {
             genres.add(new Genre(genreRowSet.getInt("ID"), genreRowSet.getString("GENRE")));
         }
-        film.setGenres(genres);
-        return film;
+        return genres;
     }
 
     private void getMaxIdFilm() {

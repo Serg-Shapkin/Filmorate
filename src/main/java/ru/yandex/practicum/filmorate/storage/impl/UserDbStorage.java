@@ -76,13 +76,14 @@ public class UserDbStorage implements UserStorage {
         SqlRowSet userRowSet = jdbcTemplate.queryForRowSet("SELECT * FROM USERS WHERE USER_ID = ?", id);
         userRowSet.next();
         if (userRowSet.last()) {
+            log.info("Запрошен пользователь с id={}", id);
             return makeUser(userRowSet);
         } else {
             log.error("Указан некорректный id пользователя");
             throw new IncorrectUserIdException("Указан некорректный id пользователя");
         }
     }
-    
+
     private User makeUser(SqlRowSet userRowSet) {
         User user = new User();
         user.setId(userRowSet.getInt("USER_ID"));
