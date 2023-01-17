@@ -9,10 +9,10 @@ import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.service.UserService;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.GenreStorage;
 import ru.yandex.practicum.filmorate.storage.LikeStorage;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -23,36 +23,43 @@ public class FilmServiceImpl implements FilmService {
     private final FilmStorage filmStorage;
     private final UserService userService;
     private final LikeStorage likeStorage;
+    private final GenreStorage genreStorage;
 
     @Override
     public Film add(Film film) {
-        filmReleaseDateValidation(film); // проверка даты релиза
-        return filmStorage.add(film);
+        filmReleaseDateValidation(film);
+        filmStorage.add(film);
+        return film;
     }
 
     @Override
     public Film update(Film film) {
-        filmReleaseDateValidation(film); // проверка даты релиза
+        filmReleaseDateValidation(film);
         filmValidation(film.getId());
-        return filmStorage.update(film);
+        filmStorage.update(film);
+        return film;
     }
 
     @Override
     public List<Film> getAll() {
-        return new ArrayList<>(filmStorage.getAll());
+        //var films = filmStorage.getAll(); // альтернатива создания списка
+        List<Film> films = filmStorage.getAll();
+        genreStorage.filmAddGenres(films);
+        return films;
     }
 
     @Override
     public Film getById(Integer id) {
         filmValidation(id);
-        return filmStorage.getById(id);
+        Film film = filmStorage.getById(id);
+        genreStorage.filmAddGenres(List.of(film));
+        return film;
     }
 
     @Override
     public Film addLike(Integer id, Integer userId) {
         filmValidation(id);
         userValidation(userId);
-
         likeStorage.add(id, userId);
         return filmStorage.getById(id);
     }
@@ -61,14 +68,15 @@ public class FilmServiceImpl implements FilmService {
     public Film removeLike(Integer id, Integer userId) {
         filmValidation(id);
         userValidation(userId);
-
         likeStorage.remove(id, userId);
         return filmStorage.getById(id);
     }
 
     @Override
     public List<Film> getPopular(Integer size) {
-        return filmStorage.getPopular(size);
+        List<Film> films = filmStorage.getPopular(size);
+        genreStorage.filmAddGenres(films);
+        return films;
     }
 
     private void filmValidation(Integer id) {

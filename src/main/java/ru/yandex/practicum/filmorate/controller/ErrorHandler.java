@@ -119,7 +119,7 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) // код ответа 500
     public ErrorResponse handleThrowable(final Throwable e) {
-        log.error("Произошла непредвиденная ошибка");
+        log.error("Произошла непредвиденная ошибка {}", e.getMessage());
         return new ErrorResponse("Произошла непредвиденная ошибка");
     }
 }

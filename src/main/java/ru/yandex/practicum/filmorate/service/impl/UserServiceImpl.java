@@ -41,17 +41,11 @@ public class UserServiceImpl implements UserService {
         return userStorage.getById(id);
     }
 
-
-
-
     @Override
     public User addToFriends(Integer id, Integer friendId) {
         userValidation(id);
         userValidation(friendId);
-
         friendStorage.add(id, friendId);
-        //userStorage.addToFriends(id, friendId);
-        //return userStorage.getById(id);
         return getById(id);
     }
 
@@ -59,10 +53,7 @@ public class UserServiceImpl implements UserService {
     public User removeFriend(Integer id, Integer friendId) {
         userValidation(id);
         userValidation(friendId);
-
         friendStorage.remove(id, friendId);
-        //userStorage.removeFriend(id, friendId);
-        //return userStorage.getById(id);
         return getById(id);
     }
 
@@ -70,20 +61,14 @@ public class UserServiceImpl implements UserService {
     public List<User> getFriendsById(Integer id) {
         userValidation(id);
         return friendStorage.getFriendsById(id);
-        //return userStorage.getFriendsById(id);
     }
 
     @Override
     public List<User> getCommonFriends(Integer id, Integer otherId) { // общие друзья
         userValidation(id);
         userValidation(otherId);
-
         return friendStorage.getCommonFriends(id, otherId);
-        //return userStorage.getCommonFriends(id, otherId);
     }
-
-
-
 
     private void userValidation(Integer id) {
         if (userStorage.getById(id) == null) {
@@ -91,10 +76,9 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    private User userNameValidation(User user) {
-        if (user.getName() == null || user.getName().isBlank()) { // если имя == null или пусто
-            user.setName(user.getLogin()); // именем будет логин
+    private void userNameValidation(User user) {
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin());
         }
-        return user;
     }
 }

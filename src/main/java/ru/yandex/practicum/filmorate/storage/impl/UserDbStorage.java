@@ -1,7 +1,10 @@
 package ru.yandex.practicum.filmorate.storage.impl;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.user.IncorrectUserIdException;
@@ -9,33 +12,32 @@ import ru.yandex.practicum.filmorate.exception.user.UserDatabaseIsEmptyException
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.util.*;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class UserDbStorage implements UserStorage {
-    private int userId = 0;
     private final JdbcTemplate jdbcTemplate;
-
-    public UserDbStorage(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-        makeUserId();
-    }
 
     @Override
     public User add(User user) {
-        userId++;
-        user.setId(userId);
-        jdbcTemplate.update("INSERT INTO USERS VALUES (?,?,?,?,?)",
-                user.getId(),
-                user.getName(),
-                user.getLogin(),
-                user.getEmail(),
-                user.getBirthday());
-        SqlRowSet userRowSet = jdbcTemplate.queryForRowSet("SELECT * FROM USERS WHERE USER_ID = ?", user.getId());
-        userRowSet.next();
-        log.info("Пользователь {} успешно добавлен", user.getName());
-        return makeUser(userRowSet);
+        String sql = "INSERT INTO USERS(NAME, LOGIN, EMAIL, BIRTHDAY) VALUES (?, ?, ?, ?)";
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            stmt.setString(1, user.getName());
+            stmt.setString(2, user.getLogin());
+            stmt.setString(3, user.getEmail());
+            stmt.setDate(4, Date.valueOf(user.getBirthday()));
+            return stmt;
+        }, keyHolder);
+        user.setId(keyHolder.getKey().intValue());
+        log.info("Добавлен пользователь {}", user.getName());
+        return user;
     }
 
     @Override
@@ -46,14 +48,8 @@ public class UserDbStorage implements UserStorage {
                 user.getEmail(),
                 user.getBirthday(),
                 user.getId());
-
-        SqlRowSet userRowSet = jdbcTemplate.queryForRowSet("SELECT * FROM USERS WHERE USER_ID = ?", user.getId());
-        if (userRowSet.next()) {
-            log.info("Данные пользователя {} успешно обновлены", user.getName());
-            return makeUser(userRowSet);
-        } else {
-            return null;
-        }
+        log.info("Данные пользователя {} успешно обновлены", user.getName());
+        return user;
     }
 
     @Override
@@ -91,19 +87,6 @@ public class UserDbStorage implements UserStorage {
         user.setLogin(userRowSet.getString("LOGIN"));
         user.setEmail(userRowSet.getString("EMAIL"));
         user.setBirthday(Objects.requireNonNull(userRowSet.getDate("BIRTHDAY")).toLocalDate());
-
-        SqlRowSet userRowSetFriends = jdbcTemplate.queryForRowSet("SELECT FRIEND_ID FROM FRIENDSHIP WHERE USER_ID = ?",
-                userRowSet.getInt("USER_ID"));
-
-        Set<Integer> friends = new HashSet<>();
-        while (userRowSetFriends.next()) {
-            friends.add(userRowSetFriends.getInt("FRIEND_ID"));
-        }
         return user;
-    }
-
-    private void makeUserId() { // если в бд есть пользователи, то запоминаем максимальный id
-        Integer userIdDb = jdbcTemplate.queryForObject("SELECT MAX(USER_ID) FROM USERS", Integer.class);
-        userId = Objects.requireNonNullElse(userIdDb, 0);
     }
 }

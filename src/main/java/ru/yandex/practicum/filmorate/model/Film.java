@@ -12,9 +12,7 @@ import java.util.*;
 @EqualsAndHashCode
 @AllArgsConstructor
 @RequiredArgsConstructor
-
 public class Film {
-
     private int id;
 
     @NotBlank(message = "Название фильма не может быть пустым")
@@ -36,5 +34,5 @@ public class Film {
     @NotNull
     private Rating mpa;
 
-    private Set<Genre> genres = new LinkedHashSet<>();
+    private LinkedHashSet<Genre> genres = new LinkedHashSet<>();
 }

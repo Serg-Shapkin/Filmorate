@@ -1,8 +1,11 @@
 package ru.yandex.practicum.filmorate.storage.impl;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.film.IncorrectFilmIdException;
@@ -11,6 +14,7 @@ import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Rating;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,62 +22,41 @@ import java.util.*;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class FilmDbStorage implements FilmStorage {
-    private int filmId = 0;
     private final JdbcTemplate jdbcTemplate;
-
-    public FilmDbStorage(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-        getMaxIdFilm();
-    }
 
     @Override
     public Film add(Film film) {
-        filmId++;
-        film.setId(filmId);
-        film.setRate(0);
-        jdbcTemplate.update("INSERT INTO FILM VALUES (?, ?, ?, ?, ?, ?, ?)",
-                film.getId(),
-                film.getName(),
-                film.getDescription(),
-                film.getReleaseDate(),
-                film.getDuration(),
-                film.getRate(),
-                film.getMpa().getId());
-        if (film.getGenres() != null) {
-            butchUpdate(film);
-        }
-        SqlRowSet filmRowSet = jdbcTemplate.queryForRowSet("SELECT * FROM FILM AS f INNER JOIN MPA AS m ON m.ID = f.RATING_ID WHERE FILM_ID = ?", film.getId());
-        filmRowSet.next();
+        String sql = "INSERT INTO FILM(NAME, DESCRIPTION, RELEASE_DATE, DURATION, RATING_ID) VALUES (?, ?, ?, ?, ?)";
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement stmt = connection.prepareStatement(sql, new String[]{"FILM_ID"});
+            stmt.setString(1, film.getName());
+            stmt.setString(2, film.getDescription());
+            stmt.setDate(3, Date.valueOf(film.getReleaseDate()));
+            stmt.setInt(4, film.getDuration());
+            stmt.setInt(5, film.getMpa().getId());
+            return stmt;
+        }, keyHolder);
+        film.setId(keyHolder.getKey().intValue());
+        saveGenres(film);
         log.info("Добавлен фильм {}", film.getName());
-        return makeFilm(filmRowSet);
+        return film;
     }
 
     @Override
     public Film update(Film film) {
-        jdbcTemplate.update("UPDATE FILM " +
-                        "SET NAME = ?, " +
-                        "DESCRIPTION = ?, " +
-                        "RELEASE_DATE = ?, " +
-                        "DURATION = ?, " +
-                        "RATING_ID = ? WHERE FILM_ID = ?",
+        jdbcTemplate.update("UPDATE FILM SET NAME = ?, DESCRIPTION = ?, RELEASE_DATE = ?, DURATION = ?, RATING_ID = ? WHERE FILM_ID = ?",
                 film.getName(),
                 film.getDescription(),
                 film.getReleaseDate(),
                 film.getDuration(),
                 film.getMpa().getId(),
                 film.getId());
-        if (film.getGenres() != null) {
-            jdbcTemplate.update("DELETE FROM GENRE_FILM WHERE FILM_ID = ?", film.getId());
-            butchUpdate(film);
-        }
-        SqlRowSet filmRowSet = jdbcTemplate.queryForRowSet("SELECT * FROM FILM AS f INNER JOIN MPA AS m ON m.ID = f.RATING_ID WHERE FILM_ID = ?", film.getId());
-        if (filmRowSet.next()) {
-            log.info("Фильм {} успешно обновлен", film.getName());
-            return makeFilm(filmRowSet);
-        } else {
-            return null;
-        }
+        saveGenres(film);
+        log.info("Фильм {} успешно обновлен", film.getName());
+        return film;
     }
 
     @Override
@@ -103,23 +86,9 @@ public class FilmDbStorage implements FilmStorage {
         }
     }
 
-    /**
-     При текущей реализации в цикле вызывается метод getById, что не совсем корректно,
-     так как на каждый его вызов происходит обращение к БД
-     */
-/*        @Override //  рабочий код
-    public List<Film> getPopular(Integer size) {
-        SqlRowSet popularFilmRowSet = jdbcTemplate.queryForRowSet("SELECT FILM_ID, RATE FROM FILM GROUP BY FILM_ID, RATE ORDER BY RATE DESC LIMIT ?", size);
-        List<Film> films = new ArrayList<>();
-        while (popularFilmRowSet.next()) {
-            films.add(getById(popularFilmRowSet.getInt("FILM_ID")));
-        }
-        return films;
-    }*/
-
     @Override
     public List<Film> getPopular(Integer size) {
-        String sql = "SELECT * FROM FILM AS f, MPA AS m WHERE f.FILM_ID = m.ID ORDER BY RATE DESC LIMIT ?";
+        String sql = "SELECT * FROM FILM AS f, MPA AS m WHERE f.RATING_ID = m.ID ORDER BY RATE DESC LIMIT ?";
         List<Film> popularFilms = jdbcTemplate.query(sql, (resultSet, rowNum) -> makePopularFilm(resultSet), size);
         log.info("Запрошен список из {} самых популярных фильмов", size);
         return popularFilms;
@@ -133,78 +102,45 @@ public class FilmDbStorage implements FilmStorage {
         film.setReleaseDate(resultSet.getDate("RELEASE_DATE").toLocalDate());
         film.setDuration(resultSet.getInt("DURATION"));
         film.setRate(resultSet.getInt("RATE"));
-
         Rating rating = new Rating();
-        rating.setId(resultSet.getInt("RATING_ID"));
+        rating.setId(resultSet.getInt("ID"));
         rating.setName(resultSet.getString("RATING"));
         film.setMpa(rating);
-
-        film.setGenres(setFilmGenre(film));
-
         return film;
     }
 
     private Film makeFilm(SqlRowSet filmRowSet) {
         Film film = new Film();
-        int filmId = filmRowSet.getInt("FILM_ID");
-
-        film.setId(filmId);
+        film.setId(filmRowSet.getInt("FILM_ID"));
         film.setName(filmRowSet.getString("NAME"));
         film.setDescription(filmRowSet.getString("DESCRIPTION"));
         film.setReleaseDate(Objects.requireNonNull(filmRowSet.getDate("RELEASE_DATE")).toLocalDate());
         film.setDuration(filmRowSet.getInt("DURATION"));
         film.setRate(filmRowSet.getInt("RATE"));
-
-        // рейтинг
         Rating rating = new Rating();
-        rating.setId(filmRowSet.getInt("RATING_ID"));
+        rating.setId(filmRowSet.getInt("ID"));
         rating.setName(filmRowSet.getString("RATING"));
         film.setMpa(rating);
-
-        // жанры
-        film.setGenres(setFilmGenre(film));
         return film;
     }
 
-    /**
-     Следует использовать отдельный метод в DAO-жанров, который будет принимать коллекцию фильмов и добавлять в каждую из коллекций фильмов полученные жанры.
-     О том, как использовать SQL оператор условия IN для получения по коллекции идентификаторов - можно посмотреть тут:
-     https://www.baeldung.com/spring-jdbctemplate-in-list
-     Таким образом мы избавимся от n-лишних запросов к БД и улучшим производительность приложения)
-     **/
-    private Set<Genre> setFilmGenre(Film film) {
-        int filmId = film.getId();
-        Set<Genre> genres = new LinkedHashSet<>();
-        SqlRowSet genreRowSet = jdbcTemplate.queryForRowSet("SELECT g.ID, g.GENRE " +
-                "FROM GENRE AS g " +
-                "INNER JOIN GENRE_FILM AS gf ON g.ID = gf.GENRE_ID " +
-                "WHERE FILM_ID = ? " +
-                "GROUP BY g.ID, g.GENRE " +
-                "ORDER BY g.ID", filmId);
-        while (genreRowSet.next()) {
-            genres.add(new Genre(genreRowSet.getInt("ID"), genreRowSet.getString("GENRE")));
+    private void saveGenres(Film film) {
+        if (film.getGenres() != null || !film.getGenres().isEmpty()) {
+            jdbcTemplate.update("DELETE FROM GENRE_FILM WHERE FILM_ID = ?", film.getId());
+
+            List<Genre> genres = new ArrayList<>(film.getGenres());
+            jdbcTemplate.batchUpdate("INSERT INTO GENRE_FILM(FILM_ID, GENRE_ID) VALUES (?, ?)", new BatchPreparedStatementSetter() {
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                    ps.setInt(1, film.getId());
+                    ps.setInt(2, genres.get(i).getId());
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return genres.size();
+                }
+            });
         }
-        return genres;
-    }
-
-    private void getMaxIdFilm() {
-        Integer filmIdDb = jdbcTemplate.queryForObject("SELECT MAX(FILM_ID) FROM FILM", Integer.class);
-        filmId = Objects.requireNonNullElse(filmIdDb, 0);
-    }
-
-    private void butchUpdate(Film film) {
-        List<Genre> genres = new ArrayList<>(film.getGenres());
-        jdbcTemplate.batchUpdate("INSERT INTO GENRE_FILM(FILM_ID, GENRE_ID) VALUES (?, ?)", new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement ps, int i) throws SQLException {
-                ps.setInt(1, film.getId());
-                ps.setInt(2, genres.get(i).getId());
-            }
-
-            @Override
-            public int getBatchSize() {
-                return genres.size();
-            }
-        });
     }
 }

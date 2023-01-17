@@ -20,7 +20,7 @@ public class MpaDbStorage implements MpaStorage {
         SqlRowSet ratingRowSet = jdbcTemplate.queryForRowSet("SELECT * FROM MPA");
         List<Rating> ratings = new ArrayList<>();
         while (ratingRowSet.next()) {
-            ratings.add(makeRating(ratingRowSet));
+            ratings.add(makeMpa(ratingRowSet));
         }
         return ratings;
     }
@@ -30,13 +30,13 @@ public class MpaDbStorage implements MpaStorage {
         SqlRowSet ratingRowSet = jdbcTemplate.queryForRowSet("SELECT * FROM MPA WHERE ID = ?", id);
         ratingRowSet.next();
         if (ratingRowSet.last()) {
-            return makeRating(ratingRowSet);
+            return makeMpa(ratingRowSet);
         } else {
             return null;
         }
     }
 
-    private Rating makeRating(SqlRowSet ratingRowSet) {
+    private Rating makeMpa(SqlRowSet ratingRowSet) {
         Rating rating = new Rating();
         rating.setId(ratingRowSet.getInt("ID"));
         rating.setName(ratingRowSet.getString("RATING"));
