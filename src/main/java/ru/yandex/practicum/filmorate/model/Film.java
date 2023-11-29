@@ -3,35 +3,36 @@ package ru.yandex.practicum.filmorate.model;
 import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
+import javax.validation.constraints.*;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 @Getter
 @Setter
 @EqualsAndHashCode
 @AllArgsConstructor
 @RequiredArgsConstructor
-
 public class Film {
+    private int id;
 
-    private long id;
-
-    @NotNull
-    @NotBlank
+    @NotBlank(message = "Название фильма не может быть пустым")
     private String name;
 
-    @Size(max=200)
+    @NotNull
+    @Size(max=200, message = "Описание фильма не может быть длиннее 200 символов")
     private String description;
 
+    @NotNull
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate releaseDate;
 
-    @Min(0)
+    @Positive(message = "Продолжительность фильма не может быть отрицательной или равна нулю")
     private int duration;
-    private final Set<Long> likes = new HashSet<>();
+
+    private int rate;
+
+    @NotNull
+    private Rating mpa;
+
+    private LinkedHashSet<Genre> genres = new LinkedHashSet<>();
 }
